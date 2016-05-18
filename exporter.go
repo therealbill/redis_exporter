@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -35,6 +34,13 @@ type scrapeResult struct {
 	Value interface{}
 	Addr  string
 	DB    string
+}
+
+var commandEntries []structures.CommandEntry
+var commandMap map[string]structures.CommandEntry
+
+func init() {
+	commandMap = make(map[string]structures.CommandEntry)
 }
 
 func (e *Exporter) initGauges() {
@@ -97,7 +103,6 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect fetches new metrics from the RedisHost and updates the appropriate metrics.
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
-	log.Print("e.Collect called")
 	scrapes := make(chan scrapeResult)
 
 	e.Lock()
@@ -111,52 +116,6 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- e.totalScrapes
 	ch <- e.scrapeErrors
 	e.collectMetrics(ch)
-}
-
-func includeMetric(name string) bool {
-
-	incl := map[string]bool{
-		"uptime_in_seconds":       true,
-		"connected_clients":       true,
-		"blocked_clients":         true,
-		"used_memory":             true,
-		"used_memory_rss":         true,
-		"used_memory_peak":        true,
-		"used_memory_lua":         true,
-		"mem_fragmentation_ratio": true,
-		"total_system_memory":     true,
-
-		"total_connections_received": true,
-		"total_commands_processed":   true,
-		"instantaneous_ops_per_sec":  true,
-		"total_net_input_bytes":      true,
-		"total_net_output_bytes":     true,
-		"rejected_connections":       true,
-
-		"expired_keys":    true,
-		"evicted_keys":    true,
-		"keyspace_hits":   true,
-		"keyspace_misses": true,
-		"pubsub_channels": true,
-		"pubsub_patterns": true,
-
-		"connected_slaves": true,
-
-		"used_cpu_sys":           true,
-		"used_cpu_user":          true,
-		"used_cpu_sys_children":  true,
-		"used_cpu_user_children": true,
-
-		"repl_backlog_size": true,
-	}
-
-	if strings.HasPrefix(name, "db") {
-		return true
-	}
-
-	_, ok := incl[name]
-
-	return ok
 }
 
 func extractInfoMetrics(info structures.RedisInfoAll, addr string, scrapes chan<- scrapeResult) error {
@@ -210,12 +169,36 @@ func extractInfoMetrics(info structures.RedisInfoAll, addr string, scrapes chan<
 	scrapes <- scrapeResult{Name: "migrate_cached_sockets", Addr: addr, DB: db, Value: info.Stats.MigrateCachedSockets}
 
 	// Command Stats
+	admin_cnt := 0.0
+	readonly_cnt := 0.0
+	write_cnt := 0.0
+	pubsub_cnt := 0.0
 	for cmd, stats := range info.Commandstats.Stats {
 		for s, v := range stats {
 			name := fmt.Sprintf("commandstats_%s_%s", cmd, s)
+			ce, exists := commandMap[cmd]
+			if exists && s == "calls" {
+				if ce.ReadOnly() {
+					readonly_cnt += v
+				}
+				if ce.Admin() {
+					admin_cnt += v
+				}
+				if ce.Pubsub() {
+					pubsub_cnt += v
+				}
+				if ce.Writes() {
+					write_cnt += v
+				}
+
+			}
 			scrapes <- scrapeResult{Name: name, Addr: addr, DB: db, Value: v}
 		}
 	}
+	scrapes <- scrapeResult{Name: "admin_command_calls", Addr: addr, DB: db, Value: admin_cnt}
+	scrapes <- scrapeResult{Name: "readonly_command_calls", Addr: addr, DB: db, Value: readonly_cnt}
+	scrapes <- scrapeResult{Name: "write_command_calls", Addr: addr, DB: db, Value: write_cnt}
+	scrapes <- scrapeResult{Name: "pubsub_command_calls", Addr: addr, DB: db, Value: pubsub_cnt}
 
 	// Keyspace
 	for _, space := range info.Keyspace.Databases {
@@ -245,8 +228,19 @@ func extractConfigMetrics(config []string, addr string, scrapes chan<- scrapeRes
 	return nil
 }
 
-func init() {
-	log.Print("Initializing exporter")
+func getCommands(conn *client.Redis) {
+	if len(commandEntries) != 0 {
+		return
+	}
+	var err error
+	commandEntries, err = conn.Command()
+	if err != nil {
+		log.Printf("Unable to acquire command entries, metrics degradated")
+		return
+	}
+	for _, cmd := range commandEntries {
+		commandMap[cmd.Name] = cmd
+	}
 }
 
 func (e *Exporter) scrape(scrapes chan<- scrapeResult) {
@@ -268,6 +262,7 @@ func (e *Exporter) scrape(scrapes chan<- scrapeResult) {
 			errorCount++
 			continue
 		}
+		getCommands(c)
 		log.Printf("Connected to %s", addr)
 		info, err := c.Info()
 		if err == nil {
