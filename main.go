@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/oliver006/redis_exporter/exporter"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -42,7 +41,7 @@ func main() {
 		passwords = append(passwords, passwords[0])
 	}
 
-	e := exporter.NewRedisExporter(exporter.RedisHost{addrs, passwords}, *namespace)
+	e := NewRedisExporter(RedisHost{addrs, passwords}, *namespace)
 	prometheus.MustRegister(e)
 
 	http.Handle(*metricPath, prometheus.Handler())

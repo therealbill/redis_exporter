@@ -1,4 +1,4 @@
-package exporter
+package main
 
 /*
   to run the tests with redis running on anything but localhost:6379 use
