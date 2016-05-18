@@ -212,7 +212,7 @@ func extractInfoMetrics(info structures.RedisInfoAll, addr string, scrapes chan<
 	// Command Stats
 	for cmd, stats := range info.Commandstats.Stats {
 		for s, v := range stats {
-			name := fmt.Sprintf("commandstats.%s.%s", cmd, s)
+			name := fmt.Sprintf("commandstats_%s_%s", cmd, s)
 			scrapes <- scrapeResult{Name: name, Addr: addr, DB: db, Value: v}
 		}
 	}
