@@ -56,11 +56,78 @@ func (e *Exporter) initGauges() {
 		Name:      "db_expiring_keys_total",
 		Help:      "Total number of expiring keys by DB",
 	}, []string{"addr", "db"})
+
 	e.metrics["db_avg_ttl_seconds"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: e.namespace,
 		Name:      "db_avg_ttl_seconds",
 		Help:      "Avg TTL in seconds",
 	}, []string{"addr", "db"})
+
+	e.metrics["uptime_in_seconds"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: e.namespace,
+		Name:      "uptime_in_seconds",
+		Help:      "Time instance has been up, measured in seconds",
+	}, []string{"addr"})
+
+	e.metrics["used_memory"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: e.namespace,
+		Name:      "used_memory",
+		Help:      "Memory used by data and buffers, in bytes",
+	}, []string{"addr"})
+
+	e.metrics["used_memory_peak"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: e.namespace,
+		Name:      "used_memory_peak",
+		Help:      "Peak used by data and buffers, in bytes",
+	}, []string{"addr"})
+
+	e.metrics["used_memory_rss"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: e.namespace,
+		Name:      "used_memory_rss",
+		Help:      "Resident Set Size by the Redis instance, in bytes",
+	}, []string{"addr"})
+
+	e.metrics["used_memory_lua"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: e.namespace,
+		Name:      "used_memory_lua",
+		Help:      "Memory used by the Lua script system, in bytes",
+	}, []string{"addr"})
+
+	e.metrics["total_system_memory"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: e.namespace,
+		Name:      "total_system_memory",
+		Help:      "Total memory available to the system, in bytes",
+	}, []string{"addr"})
+
+	e.metrics["used_cpu_sys"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: e.namespace,
+		Name:      "used_cpu_sys",
+		Help:      "System CPU Used by Redis",
+	}, []string{"addr"})
+
+	e.metrics["used_cpu_user"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: e.namespace,
+		Name:      "used_cpu_sys",
+		Help:      "User CPU Used by Redis",
+	}, []string{"addr"})
+
+	e.metrics["used_cpu_user_children"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: e.namespace,
+		Name:      "used_cpu_user_children",
+		Help:      "User CPU Used by Redis child processes",
+	}, []string{"addr"})
+
+	e.metrics["used_cpu_sys_children"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: e.namespace,
+		Name:      "used_cpu_sys_children",
+		Help:      "System CPU Used by Redis child processes",
+	}, []string{"addr"})
+
+	e.metrics["mem_fragmentation_ratio"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: e.namespace,
+		Name:      "mem_fragmentation_ratio",
+		Help:      "Memory fragmentation ratio",
+	}, []string{"addr"})
 }
 
 // NewRedisExporter returns a new exporter of Redis metrics.
