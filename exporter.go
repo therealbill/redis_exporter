@@ -99,12 +99,6 @@ func (e *Exporter) initGauges() {
 		Help:      "Total memory available to the system, in bytes",
 	}, []string{"addr"})
 
-	e.metrics["used_cpu_sys"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: e.namespace,
-		Name:      "used_cpu_sys",
-		Help:      "System CPU Used by Redis",
-	}, []string{"addr"})
-
 	e.metrics["used_cpu_user"] = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: e.namespace,
 		Name:      "used_cpu_sys",
